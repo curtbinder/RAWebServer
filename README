@@ -1,0 +1,13 @@
+Cross platform custom webserver for communicating with a Reef Angel Controller
+
+Interfaces to Reef Angel Controller via serial port
+* Allows controlling of controller without the need for a wifi adapter
+
+Application
+* java based
+* eclipse IDE
+
+Contributors
+* Curt Binder
+* Dave Molton
+* Roberto Imai
