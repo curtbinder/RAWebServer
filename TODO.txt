@@ -1,0 +1,14 @@
+Todo
+----
+Add in starting via file menu
+Add in stopping via file menu
+Update menu options based on status of webserver
+Add in check on startup for already running server (or already running application)
+Add in ability to minimize to system tray
+Add in settings dialog
+	- save port for webserver
+	- save port for controller
+	- save baudrate for controller
+Add in serial port communication to controller
+Update app icon
+Add in ability to run on startup (different for all platforms)
