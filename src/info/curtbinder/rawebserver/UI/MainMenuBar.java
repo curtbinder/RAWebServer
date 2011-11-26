@@ -15,6 +15,15 @@ public class MainMenuBar extends JMenuBar {
 	private static final long serialVersionUID = 1L;
 	private ExitAction exitAction = new ExitAction();
 	private AboutAction aboutAction = new AboutAction();
+	private StartServerAction startAction = new StartServerAction();
+	private StopServerAction stopAction = new StopServerAction();
+	private JMenuItem menuStart;
+	
+	public JMenuItem getMenuStart ( ) {
+		return menuStart;
+	}
+
+	private JMenuItem menuStop;
 
 	public class AboutAction extends AbstractAction {
 		private static final long serialVersionUID = 1L;
@@ -35,8 +44,8 @@ public class MainMenuBar extends JMenuBar {
 			d.setBanner( new ImageIcon( MainFrame.class
 					.getResource( Globals.bannerIconName ) ) );
 			d.setURL( Globals.url );
-			d.setCreditors(Globals.creditList);
-			d.setLicense(Globals.legal); 
+			d.setCreditors( Globals.creditList );
+			d.setLicense( Globals.legal );
 			d.showAbout();
 		}
 	}
@@ -47,11 +56,11 @@ public class MainMenuBar extends JMenuBar {
 		JMenu mnFile = new JMenu( "File" );
 		add( mnFile );
 		// Start Webserver
-		JMenuItem mntmStart = new JMenuItem( "Start Server" );
-		mnFile.add( mntmStart );
+		menuStart = new JMenuItem( startAction );
+		mnFile.add( menuStart );
 		// Stop Webserver
-		JMenuItem mntmStop = new JMenuItem( "Stop Server" );
-		mnFile.add( mntmStop );
+		menuStop = new JMenuItem( stopAction );
+		mnFile.add( menuStop );
 		mnFile.addSeparator();
 		JMenuItem mntmExit = new JMenuItem( exitAction );
 		mnFile.add( mntmExit );
@@ -65,4 +74,11 @@ public class MainMenuBar extends JMenuBar {
 		mnHelp.add( mntmAbout );
 	}
 
+	public void enableStart ( boolean enable ) {
+		menuStart.setEnabled( enable );
+	}
+
+	public void enableStop ( boolean enable ) {
+		menuStop.setEnabled( enable );
+	}
 }

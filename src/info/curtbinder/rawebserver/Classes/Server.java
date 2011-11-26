@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -16,9 +17,10 @@ import javax.swing.SwingUtilities;
 public class Server {
 	private static final int DEFAULT_PORT = 2000;
 	private static final int CONN_TIMEOUT = 3000;
-	private final ExecutorService exec = Executors
+	private ExecutorService exec = Executors
 			.newSingleThreadScheduledExecutor();
 	private int port;
+	private Thread serverThread;
 
 	public Server () {
 		init( DEFAULT_PORT );
@@ -29,32 +31,63 @@ public class Server {
 	}
 
 	private void init ( int port ) {
-		log( "Init with port: " + port );
 		this.port = port;
 	}
 
-	public void start ( ) throws IOException {
-		ServerSocket socket = new ServerSocket( port );
-		log( "Server Started, listening on port: " + socket.getLocalPort() );
-		while ( !exec.isShutdown() ) {
-			try {
-				final Socket conn = socket.accept();
-				exec.execute( new Runnable() {
-					public void run ( ) {
-						handleRequest( conn );
-					}
-				} );
-			} catch ( RejectedExecutionException e ) {
-				if ( !exec.isShutdown() ) {
-					log( "E: task submit rejected" );
-				}
-			}
+	public void start ( ) {
+		if ( exec.isShutdown() ) {
+			// Restart the executor if needed 
+			exec = Executors.newSingleThreadExecutor();
 		}
+		serverThread = new Thread() {
+				public void run ( ) {
+					try {
+						ServerSocket socket = new ServerSocket( port );
+						socket.setSoTimeout( CONN_TIMEOUT );
+						log( "Server Started, listening on port: " + socket.getLocalPort() );
+						while ( !exec.isShutdown() ) {
+							try {
+								final Socket conn = socket.accept();
+								if ( Thread.interrupted() ) {
+									throw new InterruptedException();
+								}
+								if ( conn.isConnected() ) {
+									exec.execute( new Runnable() {
+										public void run ( ) {
+											handleRequest( conn );
+										}
+									} );
+								}
+								if ( Thread.interrupted() ) {
+									throw new InterruptedException();
+								}
+							} catch ( RejectedExecutionException e ) {
+								if ( !exec.isShutdown() ) {
+									log( "E: task submit rejected" );
+								}
+							} catch ( InterruptedException e ) {
+								log( "Server thread interrupted" );
+							} catch ( SocketTimeoutException e ) {
+								// ignore the socket timeout
+							}
+						}
+						if ( socket.isBound() ) {
+							log( "Shutting down socket" );
+							socket.close();
+						}
+					} catch ( IOException e ) {
+						e.printStackTrace();
+					}
+					log( "Server thread exiting" );
+				}
+		};
+		serverThread.start();
 	}
 
 	public void stop ( ) {
 		log( "Server Stop" );
 		exec.shutdown();
+		serverThread.interrupt();
 	}
 
 	private void handleRequest ( Socket conn ) {
@@ -74,9 +107,14 @@ public class Server {
 			s = bin.readLine();
 			while ( bin.ready() ) {
 				bin.readLine();
+				if ( Thread.interrupted() ) {
+					throw new InterruptedException();
+				}
 			}
 			processRequest( s, bos );
 		} catch ( IOException e ) {
+			e.printStackTrace();
+		} catch ( InterruptedException e ) {
 			e.printStackTrace();
 		} finally {
 			if ( conn.isConnected() ) {

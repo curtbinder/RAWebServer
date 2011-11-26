@@ -18,6 +18,11 @@ public class MainFrame extends JFrame {
 	private JPanel contentPane;
 	private JTextArea ta;
 	private JScrollPane scrollPane;
+	private MainMenuBar mainMenu;
+
+	public MainMenuBar getMainMenu ( ) {
+		return mainMenu;
+	}
 
 	public MainFrame () {
 		setTitle( Globals.appTitle );
@@ -26,7 +31,8 @@ public class MainFrame extends JFrame {
 		// center on screen
 		setBounds( 100, 100, minWidth, minHeight );
 		setMinimumSize( new Dimension( minWidth, minHeight ) );
-		setJMenuBar( new MainMenuBar() );
+		mainMenu = new MainMenuBar();
+		setJMenuBar( mainMenu );
 
 		contentPane = new JPanel();
 		contentPane.setBorder( new EmptyBorder( 5, 5, 5, 5 ) );
