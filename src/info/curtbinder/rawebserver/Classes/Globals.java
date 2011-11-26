@@ -1,6 +1,6 @@
 package info.curtbinder.rawebserver.Classes;
 
-public interface Globals {
+public class Globals {
 	// Controller commands
 	public static final String requestRoot = "/";
 	public static final String requestWifi = "/wifi";

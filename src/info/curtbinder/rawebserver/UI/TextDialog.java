@@ -19,9 +19,6 @@ import javax.swing.JScrollPane;
 
 public class TextDialog extends JDialog {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 432907898192448125L;
 	private static final int minWidth = 200;
 	private static final int minHeight = 200;

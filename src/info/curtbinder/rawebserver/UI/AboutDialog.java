@@ -26,9 +26,6 @@ import java.net.URISyntaxException;
 
 public class AboutDialog extends JDialog {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 2285475934781331947L;
 	private static final int minWidth = 350;
 	private static final int minHeight = 270;
