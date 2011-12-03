@@ -14,8 +14,25 @@ public class StartServerAction extends AbstractAction {
 	
 	@Override
 	public void actionPerformed ( ActionEvent arg0 ) {
-		RAWebServerApp.server.start();
-		RAWebServerApp.ui.getMainMenu().enableStart(false);
-		RAWebServerApp.ui.getMainMenu().enableStop(true);
+		try{
+			
+			
+			RAWebServerApp.ui.ClearLog();
+			if(RAWebServerApp.server.StartCOM()){
+				RAWebServerApp.server.StartWebServer();
+				RAWebServerApp.ui.getMainMenu().enableStart(false);
+				RAWebServerApp.ui.getMainMenu().enableStop(true);
+			}
+			else
+			{
+				RAWebServerApp.ui.getMainMenu().enableStart(true);
+				RAWebServerApp.ui.getMainMenu().enableStop(false);
+			}
+	    }
+		catch(Exception ex)
+		{
+			RAWebServerApp.ui.Log(ex.getMessage());		
+		}
+		
 	}
 }

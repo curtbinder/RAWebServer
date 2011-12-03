@@ -15,85 +15,96 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.swing.SwingUtilities;
 
 public class Server {
-	private static final int DEFAULT_PORT = 2000;
-	private static final int CONN_TIMEOUT = 3000;
+	
+	private static final int CONN_TIMEOUT = 3500;
+	public static int CONN_PORT;
 	private ExecutorService exec = Executors
 			.newSingleThreadScheduledExecutor();
-	private int port;
+
 	private Thread serverThread;
-
-	public Server () {
-		init( DEFAULT_PORT );
+	private COMController controller = COMController.INSTANCE();
+	
+	public boolean StartCOM()
+	{
+		if(Globals.getComPort() == null || Globals.getComPort().isEmpty())
+		{
+			log("COM port not yet defined.  Cannot start server.");
+			return false;
+		}
+		try{
+			controller.StartCOMListener();
+			log("COM Port '" + Globals.getComPort() + "' successfully opened..");
+			return true;
+		}
+		catch(Exception ex)
+		{
+			log("Unable to open COM port...Server not started.");
+			return false;
+		}	
+		
 	}
-
-	public Server ( int port ) {
-		init( port );
-	}
-
-	private void init ( int port ) {
-		this.port = port;
-	}
-
-	public void start ( ) {
+	public void StartWebServer ( ) {		
+		
+		
 		if ( exec.isShutdown() ) {
-			// Restart the executor if needed 
 			exec = Executors.newSingleThreadExecutor();
 		}
+		
 		serverThread = new Thread() {
-				public void run ( ) {
-					try {
-						ServerSocket socket = new ServerSocket( port );
-						socket.setSoTimeout( CONN_TIMEOUT );
-						log( "Server Started, listening on port: " + socket.getLocalPort() );
-						while ( !exec.isShutdown() ) {
-							try {
-								final Socket conn = socket.accept();
-								if ( Thread.interrupted() ) {
-									throw new InterruptedException();
+				public void run (){
+					try{													
+							ServerSocket socket = new ServerSocket( Integer.parseInt(Globals.getListenPort()));
+							socket.setSoTimeout( CONN_TIMEOUT );
+							log( "Server Started, listening on port: " + socket.getLocalPort() );								
+							while ( !exec.isShutdown() ) {
+								try {
+									final Socket conn = socket.accept();
+									if (Thread.interrupted() ) {
+										throw new InterruptedException();
+									}
+									if (conn.isConnected()) {									
+										exec.execute( new Runnable() {
+											public void run ( ) {
+												handleRequest( conn );
+											}
+										} );
+									}
+									if ( Thread.interrupted() ) {
+										throw new InterruptedException();
+									}
+								} catch ( RejectedExecutionException e ) {
+									if ( !exec.isShutdown() ) {
+										log( "E: task submit rejected" );
+									}
+								} catch ( InterruptedException e ) {
+									log( "Server thread interrupted" );
+								} catch ( SocketTimeoutException e ) {
+									// ignore the socket timeout
 								}
-								if ( conn.isConnected() ) {
-									exec.execute( new Runnable() {
-										public void run ( ) {
-											handleRequest( conn );
-										}
-									} );
-								}
-								if ( Thread.interrupted() ) {
-									throw new InterruptedException();
-								}
-							} catch ( RejectedExecutionException e ) {
-								if ( !exec.isShutdown() ) {
-									log( "E: task submit rejected" );
-								}
-							} catch ( InterruptedException e ) {
-								log( "Server thread interrupted" );
-							} catch ( SocketTimeoutException e ) {
-								// ignore the socket timeout
-							}
 						}
 						if ( socket.isBound() ) {
-							log( "Shutting down socket" );
 							socket.close();
 						}
 					} catch ( IOException e ) {
 						e.printStackTrace();
-					}
-					log( "Server thread exiting" );
-				}
+					}					
+				}				
 		};
-		serverThread.start();
+		serverThread.start();		
 	}
-
+	
 	public void stop ( ) {
 		log( "Server Stop" );
-		exec.shutdown();
+		exec.shutdown();		
 		serverThread.interrupt();
+		if(controller.isSerialOpen())
+			controller.StopCOMListener();
+		
 	}
 
-	private void handleRequest ( Socket conn ) {
-		log( "New connection from: " + conn.getInetAddress().getHostAddress() );
+	private void handleRequest ( Socket conn ) {		
 		try {
-			// turn off keepalive
+			// turn off keep-alive
 			conn.setKeepAlive( false );
 			conn.setSoTimeout( CONN_TIMEOUT );
 
@@ -111,15 +122,14 @@ public class Server {
 					throw new InterruptedException();
 				}
 			}
-			processRequest( s, bos );
+			processRequest( s, bos, conn.getInetAddress().getHostAddress() );
 		} catch ( IOException e ) {
 			e.printStackTrace();
 		} catch ( InterruptedException e ) {
 			e.printStackTrace();
 		} finally {
 			if ( conn.isConnected() ) {
-				try {
-					log( "Closing" );
+				try {					
 					conn.close();
 				} catch ( IOException e ) {
 					e.printStackTrace();
@@ -128,74 +138,48 @@ public class Server {
 		}
 	}
 
-	private void processRequest ( String req, BufferedWriter bos ) {
+	private void processRequest ( String req, BufferedWriter bos, String sender ) {
+		
+		if(req.contains("favicon.ico"))
+			return;
+		log("Processing request from: " + sender);
 		log( "Request: '" + req + "'" );
-		int len = req.length();
-		int start = 0, end = len;
-		start = req.indexOf( ' ' ) + 1;
-		end = req.indexOf( ' ', start );
-		// Should keep the actual command in the string
-		// only removed for generic processing temporarily
-		String cmd = req.substring( start, end );
+				
+		int end = req.indexOf( ' ', req.indexOf(' ')+1);
+		
+	    // The command string needs to be sent to the controller in the form of "GET /r99 " when communicating over USB.  
+		// The leading 'GET' and trailing 'space' are needed for the controller to process the request properly.
+		String cmd = req.substring( 0, end )+ " ";
 		log( "Command:  '" + cmd + "'" );
-
-		// Should just pass the request on to the controller
-		// sendCmdToController(cmd);
-		String response = "<html><head><title>Response</title></head><body>";
-		response += sendCmdToController(cmd);
-		response += "</body></html>";
+				
+		if(!controller.isSerialOpen())
+		{
+			log("Serial port not open.  Cannot forward reqeuest to controller.");
+			return;		
+		}		
+		try
+		{
+			//Should just pass the request on to the controller
+			log("Forwarding reqeuest to " + Globals.getComPort());
+			controller.WriteSerial(cmd);			
+			
+			 //* Putting the thread to sleep for a second seems to be enough time to let the controller respond...			 
+			Thread.sleep(1000);
+			log("Controller responded with " + controller.getNumOfBytes() + " bytes");
+		}
+		catch(Exception ex)
+		{
+			log("Error during controller I/O: " + ex.getMessage());
+		}
 		
 		try {
-			bos.write( response );
+			bos.write( controller.SerialResponse() );
 			bos.flush();
 		} catch ( IOException e ) {
 			e.printStackTrace();
 		}
 	}
-
-	private String sendCmdToController ( String cmd ) {
-		String response = "";
-		// Delete all this when communicating to controller
-		// Just send the command, read the response, send the response
-		// Do not need to process the response
-		if ( cmd.equalsIgnoreCase( Globals.requestRoot ) ) {
-			response = "Request Root";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestWifi ) ) {
-			response = "Request Wifi Page";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestModeWater ) ) {
-			response = "Request Water Change Mode";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestCalibrationReload ) ) {
-			response = "Request Calibration Reload";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestModeFeeding ) ) {
-			response = "Request Feeding Mode";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestBtnPress ) ) {
-			response = "Request Button Press";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestStatusAll ) ) {
-			response = "Request Status All";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestStatusNew ) ) {
-			response = "Request Status New";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestMemoryAll ) ) {
-			response = "Request Memory All";
-		} else if ( cmd.equalsIgnoreCase( Globals.requestVersion ) ) {
-			response = "Request Version";
-		} else if ( cmd.startsWith( Globals.requestDateTime ) ) {
-			// start or entire cmd
-			response = "Request Date Time";
-		} else if ( cmd.startsWith( Globals.requestMemoryInt ) ) {
-			// start
-			response = "Request Memory Int";
-		} else if ( cmd.startsWith( Globals.requestMemoryByte ) ) {
-			// start
-			response = "Request Memory Byte";
-		} else if ( cmd.startsWith( Globals.requestStatus ) ) {
-			// start
-			response = "Request Status";
-		} else {
-			response = "Unknown Request";
-		}
-		return response;
-	}
-
+	
 	private void log ( final String msg ) {
 		SwingUtilities.invokeLater( new Runnable() {
 			public void run ( ) {

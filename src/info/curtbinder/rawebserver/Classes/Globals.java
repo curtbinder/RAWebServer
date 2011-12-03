@@ -1,6 +1,19 @@
 package info.curtbinder.rawebserver.Classes;
 
 public class Globals {
+	
+	
+	//Stored Properties
+	public static String getListenPort()
+	{
+		return WebServerProps.INSTANCE().GetProp("LISTEN_PORT");		
+	}
+	public static String getComPort()
+	{
+		return WebServerProps.INSTANCE().GetProp("COM_PORT");
+	}
+	
+	
 	// Controller commands
 	public static final String requestRoot = "/";
 	public static final String requestWifi = "/wifi";
