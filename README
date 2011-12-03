@@ -9,5 +9,26 @@ Application
 
 Contributors
 * Curt Binder
-* David Molton
+* Dave Molton
 * Roberto Imai
+
+
+***ABOUT CONTROLLER COM PORTS***
+Each time the settings menu is activated, your computer is scanned for available COM ports the server app can communicate over.  
+If you do not see a list of available COM ports in the drop down menu, make sure the Reef Angel TTL USB cable is plugged in and drivers installed correctly. 
+- Make sure SET RTS on close is checked
+- Baud Rate = 57600
+
+**ABOUT SERIAL LIBRARIES**
+Native java communication to serial ports is not cross platform with the javax.comm libraries available from sun.  The library RXTX should fill this gap for us.
+The RXTXcomm.jar is included (lib folder) and referenced in the project.  Additionally the rxtxParallel.dll and rxtxSerial.dll also need to be copied the users JAVA_HOME\bin directory.
+e.x(C:\Program Files\Java\jre7\bin)
+
+Different versions of the two compiled libraries are available and need to be copied accordingly (x86 vs x64)
+
+For more info see:
+http://rxtx.qbang.org/wiki/index.php/Main_Page
+
+About x64:
+http://www.cloudhopper.com/opensource/rxtx/
+
