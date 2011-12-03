@@ -15,8 +15,16 @@ public class StopServerAction extends AbstractAction {
 	
 	@Override
 	public void actionPerformed ( ActionEvent arg0 ) {
-		RAWebServerApp.server.stop();
-		RAWebServerApp.ui.getMainMenu().enableStart(true);
-		RAWebServerApp.ui.getMainMenu().enableStop(false);
+		try{
+			System.out.println("PERFORMING STOP!");		
+			RAWebServerApp.ui.ClearLog();
+			RAWebServerApp.server.stop();
+			RAWebServerApp.ui.getMainMenu().enableStart(true);
+			RAWebServerApp.ui.getMainMenu().enableStop(false);
+		}
+		catch(Exception ex)
+		{
+			RAWebServerApp.ui.Log(ex.getMessage());		
+		}
 	}
 }
